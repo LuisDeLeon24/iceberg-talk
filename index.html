@@ -159,15 +159,39 @@ const SLIDES = [
     imgs:["Assets/Labs/Autonomous/openclaw.png","Assets/Labs/Autonomous/hermes-agent.png"],
     imgScale:1.3},
 
-  {depthLabel:"−4.800 m · abismo", ratio:1.0,
+  {depthLabel:"−4.800 m", ratio:0.90,
     title:"Incidentes <em>importantes</em> de la IA",
-    desc:"El fondo oscuro del iceberg: cuando la IA falla, alucina, sesga o se sale del guion. Historias reales que conviene mirar de frente.",
+    desc:"La IA no es perfecta.",
     imgs:[]},
+
+  {depthLabel:"−5.200 m", ratio:0.94,
+    title:"Sesgos en los <em>datos</em> de entrenamiento",
+    desc:"",
+    imgs:["Assets/Labs/Sesgos/grok.webp"],
+    imgScale:1.55},
+
+  {depthLabel:"−5.600 m", ratio:0.97,
+    title:"Productos <em>fallidos</em>",
+    desc:"",
+    imgs:["Assets/Labs/Fallidos/cortana.png","Assets/Labs/Fallidos/sora.jpg","Assets/Labs/Fallidos/atlas.jpg"],
+    frame:"stack",
+    imgScales:[1.65,1.65,1.65]},
+
+  {depthLabel:"−6.000 m · abismo", ratio:1.0,
+    title:"Comportamientos <em>potencialmente</em> peligrosos",
+    desc:"",
+    imgs:["Assets/Labs/Comportamientos/misalignment-paper.png"],
+    imgScale:1.35},
 
   {type:"cover", depthLabel:"De vuelta a la superficie", ratio:0,
     eyebrow:"Fin del descenso",
-    title:"<em>Gracias</em> por bajar conmigo",
-    sub:"Volvemos a la superficie. Preguntas, ideas y contacto: [tu correo · tus redes]."}
+    title:"<em>Gracias</em> por su atención",
+    contact:[
+      {label:"Web", value:"ldeleon.com", href:"https://ldeleon.com"},
+      {label:"LinkedIn", value:"Luis De León", href:"https://www.linkedin.com/in/luis-de-le%C3%B3n"},
+      {label:"GitHub", value:"luisdeleon24", href:"https://github.com/luisdeleon24"}
+    ],
+    qr:"Assets/ldeleonb.svg"}
 ];
 
 // ---- palette interpolation (surface bright -> abyss dark) ----
@@ -205,6 +229,10 @@ function mediaHTML(s){
       <div class="hero-badges">${badges}</div>
     </div>`;
   }
+  if(s.frame==="stack"){
+    const cells=imgs.map((src,i)=>`<div class="cell" style="--sc:${sc(i)}"><img src="${encodeURI(src)}" alt=""></div>`).join("");
+    return `<div class="media grid stack">${cells}</div>`;
+  }
   const frame=s.frame==="portrait"?" portrait":"";
   if(imgs.length===1){
     return `<div class="media${frame}" style="--sc:${sc(0)}"><img src="${encodeURI(imgs[0])}" alt=""></div>`;
@@ -218,21 +246,37 @@ SLIDES.forEach(s=>{
   const el=document.createElement("section");
   el.className="slide"+(s.type==="cover"?" cover":"");
   if(s.type==="cover"){
+    const contact=(s.contact&&s.contact.length)?`
+      <ul class="contact">
+        ${s.contact.map(c=>`<li><span class="contact-label">${c.label}</span><a href="${c.href}" target="_blank" rel="noopener">${c.value}</a></li>`).join("")}
+      </ul>`:"";
+    const qr=s.qr?`<div class="qr-block"><span class="qr-label">Mis links</span><div class="qr"><img src="${encodeURI(s.qr)}" alt="QR de contacto"></div></div>`:"";
     el.innerHTML=`
-      <div>
-        ${s.eyebrow ? `<div class="eyebrow">${s.eyebrow}</div>` : ""}
-        <h1 class="title">${s.title}</h1>
-        <p class="sub">${s.sub}</p>
+      <div class="cover-body">
+        <div class="cover-copy">
+          ${s.eyebrow ? `<div class="eyebrow">${s.eyebrow}</div>` : ""}
+          <h1 class="title">${s.title}</h1>
+          ${s.sub ? `<p class="sub">${s.sub}</p>` : ""}
+          ${contact}
+        </div>
+        ${qr}
       </div>`;
   }else{
     const logos=(s.logos&&s.logos.length)?`
       <div class="logo-row">
         ${s.logos.map(src=>`<span class="logo-slot"><img src="${encodeURI(src)}" alt=""></span>`).join("")}
       </div>`:"";
-    el.innerHTML=`
+    const centered=!(s.imgs&&s.imgs.length);
+    if(centered)el.classList.add("centered");
+    el.innerHTML=centered?`
       <div class="col-text">
         <h1 class="title">${s.title}</h1>
-        <p class="desc">${s.desc}</p>
+        ${s.desc ? `<p class="desc">${s.desc}</p>` : ""}
+        ${logos}
+      </div>`:`
+      <div class="col-text">
+        <h1 class="title">${s.title}</h1>
+        ${s.desc ? `<p class="desc">${s.desc}</p>` : ""}
         ${logos}
       </div>
       ${mediaHTML(s)}`;
@@ -271,15 +315,44 @@ function paint(r){
   document.documentElement.style.setProperty("--o",(0.15+r*0.5).toFixed(2));
 }
 
+let animTimer=null;
+let boot=true;
 function go(n){
-  idx=Math.max(0,Math.min(SLIDES.length-1,n));
-  slides.forEach((el,i)=>el.classList.toggle("active",i===idx));
+  n=Math.max(0,Math.min(SLIDES.length-1,n));
+  if(!boot&&n===idx)return;
+  const prev=idx;
+  const dir=n>prev?1:n<prev?-1:0;
+
+  if(boot||dir===0){
+    slides.forEach((el,i)=>{
+      el.classList.remove("active","exit-up","exit-down","enter-from-above","enter-from-below");
+      if(i===n)el.classList.add("active");
+    });
+    boot=false;
+  }else{
+    const out=slides[prev];
+    const inn=slides[n];
+    slides.forEach(el=>el.classList.remove("exit-up","exit-down","enter-from-above","enter-from-below"));
+    out.classList.add(dir>0?"exit-up":"exit-down");
+    out.classList.remove("active");
+    inn.classList.add(dir>0?"enter-from-below":"enter-from-above");
+    void inn.offsetWidth;
+    inn.classList.add("active");
+    inn.classList.remove("enter-from-below","enter-from-above");
+    clearTimeout(animTimer);
+    animTimer=setTimeout(()=>{
+      out.classList.remove("exit-up","exit-down");
+    },560);
+  }
+
+  idx=n;
   const s=SLIDES[idx];
   paint(s.ratio);
   const m=document.getElementById("marker");
   m.style.top=ratioToTop(s.ratio)+"%";m.dataset.d=s.depthLabel;
   document.getElementById("bar").style.width=(idx/(SLIDES.length-1)*100)+"%";
   document.getElementById("cur").textContent=String(idx+1).padStart(2,"0");
+  window.scrollTo(0,0);
 }
 document.getElementById("tot").textContent=String(SLIDES.length).padStart(2,"0");
 
@@ -314,9 +387,27 @@ document.addEventListener("keydown",e=>{
   else if(e.key.toLowerCase()==="f"){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
 });
 
-let sx=0;
-addEventListener("touchstart",e=>sx=e.touches[0].clientX,{passive:true});
-addEventListener("touchend",e=>{const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)(dx<0?next():prev());});
+// wheel / trackpad: one slide per gesture
+let wheelLock=false;
+addEventListener("wheel",e=>{
+  if(map.classList.contains("open"))return;
+  e.preventDefault();
+  if(wheelLock||Math.abs(e.deltaY)<8)return;
+  wheelLock=true;
+  e.deltaY>0?next():prev();
+  setTimeout(()=>wheelLock=false,560);
+},{passive:false});
+
+// swipe: vertical preferred for phone scroll-feel, horizontal still works
+let sx=0,sy=0;
+addEventListener("touchstart",e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});
+addEventListener("touchend",e=>{
+  if(map.classList.contains("open"))return;
+  const dx=e.changedTouches[0].clientX-sx;
+  const dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>50)(dy<0?next():prev());
+  else if(Math.abs(dx)>50)(dx<0?next():prev());
+});
 
 go(0);
 </script>
