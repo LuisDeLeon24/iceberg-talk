@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>El Iceberg de la IA — Luis De León</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Mozilla+Headline:wght@200..700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="deck" id="deck">
+  <div class="glow" id="glow"></div>
+  <div class="grain"></div>
+  <div class="bubbles" id="bubbles"></div>
+
+  <div class="topbar"><div class="progress"><span id="bar"></span></div></div>
+
+  <div class="ruler" id="ruler">
+    <div class="marker" id="marker" data-d="0 m"></div>
+  </div>
+
+  <main class="stage" id="stage"></main>
+
+  <button class="navbtn" id="prev" aria-label="Anterior">&#8249;</button>
+  <button class="navbtn" id="next" aria-label="Siguiente">&#8250;</button>
+
+  <footer class="hud">
+    <div class="brand">El <b>Iceberg</b> de la IA</div>
+    <div class="right">
+      <span class="hint">← → navegar · M mapa · F pantalla completa</span>
+      <span class="counter"><b id="cur">01</b> / <span id="tot">16</span></span>
+    </div>
+  </footer>
+
+  <div class="map" id="map">
+    <div class="maphead">
+      <h2>La <em>sonda</em> · mapa de descenso</h2>
+      <button class="close" id="mapclose">cerrar ✕</button>
+    </div>
+    <div class="mapgrid" id="mapgrid"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CÓMO AGREGAR IMÁGENES / LOGOS:
+   En cada diapositiva usa el campo  imgs: []
+     · 1 logo   ->  imgs:["logos/llama.png"]
+     · varios   ->  imgs:["logos/llama.png","logos/mistral.png","logos/qwen.png"]
+   Deja  imgs:[]  vacío para ver el marcador de posición.
+   (Guarda las imágenes en una carpeta junto a este archivo, p.ej. /logos)
+   ============================================================ */
+const SLIDES = [
+  {type:"cover", depthLabel:"Superficie · 0 m", ratio:0,
+    title:"El iceberg de la IA",
+    sub:"Del no code a los orquestadores para una IA autónoma  <span style=\"white-space:nowrap;color:var(--gold)\">Luis De León</span>"},
+
+  {depthLabel:"Superficie · 0 m", ratio:0.02,
+    title:"Hola, soy<br><em style=\"white-space:nowrap\">Luis De León</em>",
+    desc:"Desarrollador de software, estudiante, entusiasta de los hackathons y el desarrollo de inteligencia artificial.",
+    imgs:["Assets/Me/Me.jpeg","Coding.JPG","Assets/Me/Equipo 6.jpg","Assets/Me/Winner.jpeg"],
+    logos:["Assets/Me/logos/normalized/the502.png","Assets/Me/logos/normalized/internet-society.png","Assets/Me/logos/normalized/ieee.png"],
+    frame:"collage"},
+
+  {depthLabel:"−30 m", ratio:0.05,
+    title:"Laboratorios <em>occidentales</em>",
+    desc:"OpenAI, Anthropic, Google DeepMind y Mistral AI son los laboratorios más avanzados en inteligencia artificial. Apoyados por universidades como Stanford, MIT y UC Berkeley, y por la infraestructura de AWS y Azure, mantienen la delantera.",
+    imgs:["Assets/Labs/Western/openai.png","Assets/Labs/Western/anthropic.png","Assets/Labs/Western/deepmind.png","Assets/Labs/Western/mistral.png"]},
+
+  {depthLabel:"−45 m", ratio:0.07,
+    title:"Laboratorios <em>chinos</em>",
+    desc:"DeepSeek, Moonshot y Zhipu AI, los reyes de la IA open source: se centran en eficiencia y optimización de costes. Algunos, prácticamente fabricados dentro de las propias universidades chinas.",
+    imgs:["Assets/Labs/Chinese/deepseek.png","Assets/Labs/Chinese/moonshot.png","Assets/Labs/Chinese/zhipu.png"],
+    imgScales:[1.5,1.5,1]},
+
+  {depthLabel:"−60 m", ratio:0.10,
+    title:"LLMs",
+    desc:"Modelos basados en arquitecturas de transformadores entrenados a gran escala para predecir el siguiente token.",
+    imgs:["Assets/Labs/LLMs/chatgpt.png","Assets/Labs/LLMs/claude.png","Assets/Labs/LLMs/gemini.png","Assets/Labs/LLMs/perplexity.png"],
+    imgScales:[1,1.2,1.2,1.2]},
+
+  {depthLabel:"−120 m", ratio:0.14,
+    title:"LLMs Open Source",
+    desc:"Modelos de lenguaje cuyos pesos (parámetros entrenados) son públicos y descargables. Esto permite ejecutarlos localmente, modificarlos o desplegarlos en servidores propios sin depender de APIs de terceros ni enviar datos sensibles fuera de la infraestructura local.",
+    imgs:["Assets/Labs/Chinese/deepseek.png","Assets/Labs/OpenSource/kimi.png","Assets/Labs/OpenSource/xiaomi-mimo.png","Assets/Labs/OpenSource/glm.png"],
+    imgScales:[1.4,1.4,1.1,1.1]},
+
+  {depthLabel:"−300 m", ratio:0.20,
+    title:"Deep Learning",
+    desc:"Es el motor matemático detrás de todo. Se basa en redes neuronales artificiales de muchas capas que extraen características de los datos de forma jerárquica.",
+    imgs:["Assets/Labs/DeepLearning/deep-neural-network.webp"],
+    imgScale:1.2},
+
+  {depthLabel:"−500 m", ratio:0.27,
+    title:"Reinforcement Learning",
+    desc:"Un paradigma de aprendizaje donde un agente interactúa con un entorno, toma acciones y recibe recompensas o penalizaciones.",
+    imgs:["Assets/Labs/RL/reinforcement-learning.png"],
+    imgScale:1.1},
+
+  {depthLabel:"−800 m", ratio:0.34,
+    title:"RAGs <em>· Retrieval-Augmented Generation</em>",
+    desc:"Una técnica que conecta un LLM a una base de datos externa en tiempo real.",
+    imgs:["Assets/Labs/RAGs/rag-diagram.png","Assets/Labs/RAGs/postgresql.png","Assets/Labs/RAGs/mongodb.png","Assets/Labs/RAGs/supabase.png"],
+    frame:"hero",
+    imgScales:[1,1.2,1.2,1.2]},
+
+  {depthLabel:"−1.100 m", ratio:0.40,
+    title:"Prompting",
+    desc:"El arte de pedir bien. Pequeñas palabras con un efecto enorme: contexto, rol, ejemplos y restricciones que cambian el resultado.",
+    imgs:["Assets/Labs/Prompting/prompt-engineering-pyramid.png"],
+    imgScale:1.1},
+
+  {depthLabel:"−1.400 m", ratio:0.46,
+    title:"Skills",
+    desc:"Capacidades reutilizables e independientes que amplían la funcionalidad de un agente de IA con conocimientos especializados, flujos de trabajo e instrucciones específicas para cada tarea.",
+    imgs:["Assets/Labs/Skills/skills.png"],
+    imgScale:1.2},
+
+  {depthLabel:"−1.800 m", ratio:0.53,
+    title:"MCPs <em>· Model Context Protocol</em>",
+    desc:"Model Context Protocol: el «USB-C» de la IA. Un estándar para conectar modelos con herramientas, datos y el mundo real.",
+    imgs:["Assets/Labs/MCPs/mcp-architecture.png"],
+    imgScale:1.15},
+
+  {depthLabel:"−2.200 m", ratio:0.60,
+    title:"WorkFlows",
+    desc:"Integración de la IA en nuestros flujos de trabajo y tareas cotidianas.",
+    imgs:["Assets/Labs/WorkFlows/ai-workflow-benefits.png"],
+    imgScale:1.1},
+
+  {depthLabel:"−2.600 m", ratio:0.67,
+    title:"Automatizaciones <em>· n8n</em>",
+    desc:"Procesos predefinidos que se ejecutan automáticamente y en segundo plano.",
+    imgs:["Assets/Labs/Automatizaciones/n8n-workflow.png"]},
+
+  {depthLabel:"−3.000 m", ratio:0.74,
+    title:"Agentes",
+    desc:"En lugar de seguir una ruta, cumple un objetivo.",
+    imgs:["Assets/Labs/Agentes/v0.png","Assets/Labs/Agentes/v0-wordmark.png","Assets/Labs/Agentes/claude-pixel.png"],
+    imgScale:1.3},
+
+  {depthLabel:"−3.400 m", ratio:0.81,
+    title:"Harness <em>Engineering</em>",
+    desc:"El entorno y las herramientas sobre las que se ejecuta el modelo de IA.",
+    imgs:["Assets/Labs/Harness/cursor.png","Assets/Labs/Harness/v0-app.png"],
+    imgScale:1.3},
+
+  {depthLabel:"−3.800 m", ratio:0.87,
+    title:"Loop <em>Engineering</em>",
+    desc:"Optimización de las iteraciones de nuestro modelo de IA, para corregir la salida de nuestros agentes.",
+    imgs:["Assets/Labs/Loop/loop-engineering.png"]},
+
+  {depthLabel:"−4.200 m", ratio:0.94,
+    title:"Agentes <em>Autónomos</em>",
+    desc:"Operan de forma independiente hasta alcanzar un objetivo sin necesidad de supervisión humana: descomponen y enrutan las tareas, las envían a varios agentes e incluso pueden mejorarse a sí mismos.",
+    imgs:["Assets/Labs/Autonomous/openclaw.png","Assets/Labs/Autonomous/hermes-agent.png"],
+    imgScale:1.3},
+
+  {depthLabel:"−4.800 m · abismo", ratio:1.0,
+    title:"Incidentes <em>importantes</em> de la IA",
+    desc:"El fondo oscuro del iceberg: cuando la IA falla, alucina, sesga o se sale del guion. Historias reales que conviene mirar de frente.",
+    imgs:[]},
+
+  {type:"cover", depthLabel:"De vuelta a la superficie", ratio:0,
+    eyebrow:"Fin del descenso",
+    title:"<em>Gracias</em> por bajar conmigo",
+    sub:"Volvemos a la superficie. Preguntas, ideas y contacto: [tu correo · tus redes]."}
+];
+
+// ---- palette interpolation (surface bright -> abyss dark) ----
+const STOPS=[{r:0,c:[233,243,246]},{r:0.30,c:[26,106,134]},{r:0.62,c:[10,44,64]},{r:1,c:[3,12,21]}];
+const lerp=(a,b,t)=>a+(b-a)*t;
+function colorAt(r){for(let i=0;i<STOPS.length-1;i++){const s=STOPS[i],e=STOPS[i+1];if(r<=e.r){const t=(r-s.r)/(e.r-s.r||1);return[0,1,2].map(k=>Math.round(lerp(s.c[k],e.c[k],t)));}}return STOPS[STOPS.length-1].c;}
+const shade=(c,f)=>c.map(v=>Math.max(0,Math.min(255,Math.round(v*f))));
+const rgb=c=>`rgb(${c[0]},${c[1]},${c[2]})`;
+
+const stage=document.getElementById("stage");
+const deck=document.getElementById("deck");
+const glow=document.getElementById("glow");
+let idx=0;
+
+function mediaHTML(s){
+  const imgs=s.imgs||[];
+  if(imgs.length===0){
+    return `<div class="media"></div>`;
+  }
+  const scales=s.imgScales||[];
+  const baseScale=s.imgScale||1;
+  const sc=i=>scales[i]??baseScale;
+  if(s.frame==="collage"){
+    const frames=imgs.map((src,i)=>`
+      <figure class="film film-${i+1}">
+        <img src="${encodeURI(src)}" alt="">
+      </figure>`).join("");
+    return `<div class="media collage">${frames}</div>`;
+  }
+  if(s.frame==="hero"){
+    const [hero,...rest]=imgs;
+    const badges=rest.map((src,i)=>`<span class="badge" style="--sc:${sc(i+1)}"><img src="${encodeURI(src)}" alt=""></span>`).join("");
+    return `<div class="media hero" style="--sc:${sc(0)}">
+      <div class="hero-main"><img src="${encodeURI(hero)}" alt=""></div>
+      <div class="hero-badges">${badges}</div>
+    </div>`;
+  }
+  const frame=s.frame==="portrait"?" portrait":"";
+  if(imgs.length===1){
+    return `<div class="media${frame}" style="--sc:${sc(0)}"><img src="${encodeURI(imgs[0])}" alt=""></div>`;
+  }
+  const layout=imgs.length===4?" four":imgs.length>=3?" three":"";
+  const cells=imgs.map((src,i)=>`<div class="cell" style="--sc:${sc(i)}"><img src="${encodeURI(src)}" alt=""></div>`).join("");
+  return `<div class="media grid${layout}">${cells}</div>`;
+}
+
+SLIDES.forEach(s=>{
+  const el=document.createElement("section");
+  el.className="slide"+(s.type==="cover"?" cover":"");
+  if(s.type==="cover"){
+    el.innerHTML=`
+      <div>
+        ${s.eyebrow ? `<div class="eyebrow">${s.eyebrow}</div>` : ""}
+        <h1 class="title">${s.title}</h1>
+        <p class="sub">${s.sub}</p>
+      </div>`;
+  }else{
+    const logos=(s.logos&&s.logos.length)?`
+      <div class="logo-row">
+        ${s.logos.map(src=>`<span class="logo-slot"><img src="${encodeURI(src)}" alt=""></span>`).join("")}
+      </div>`:"";
+    el.innerHTML=`
+      <div class="col-text">
+        <h1 class="title">${s.title}</h1>
+        <p class="desc">${s.desc}</p>
+        ${logos}
+      </div>
+      ${mediaHTML(s)}`;
+  }
+  stage.appendChild(el);
+});
+const slides=[...document.querySelectorAll(".slide")];
+
+// ruler ticks
+const ruler=document.getElementById("ruler");
+for(let i=0;i<=20;i++){const t=document.createElement("div");t.className="tick"+(i%5===0?" major":"");t.style.top=(6+i*4.4)+"%";ruler.appendChild(t);}
+
+// map
+const mapgrid=document.getElementById("mapgrid");
+SLIDES.forEach((s,i)=>{
+  const bare=s.title.replace(/<[^>]+>/g,"");
+  const it=document.createElement("div");
+  it.className="mapitem";
+  it.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span><span><span class="t">${bare}</span><span class="s">${s.depthLabel}</span></span>`;
+  it.addEventListener("click",()=>{go(i);closeMap();});
+  mapgrid.appendChild(it);
+});
+
+const ratioToTop=r=>8+r*82;
+
+function paint(r){
+  const base=colorAt(r);
+  deck.style.background=`linear-gradient(180deg,${rgb(shade(base,r<0.3?1.06:1.28))},${rgb(shade(base,.78))})`;
+  const light=r<0.18;
+  deck.style.setProperty("--txt",light?"#10262e":"#f2f8fa");
+  deck.style.setProperty("--txt-soft",light?"#425c65":"#c2d7de");
+  deck.style.setProperty("--line",light?"rgba(16,38,46,.16)":"rgba(242,248,250,.22)");
+  deck.style.setProperty("--card",light?"rgba(255,255,255,.72)":"rgba(255,255,255,.9)");
+  deck.style.setProperty("--card-line",light?"rgba(16,38,46,.12)":"rgba(16,38,46,.08)");
+  glow.style.opacity=light?"1":"0.15";
+  document.documentElement.style.setProperty("--o",(0.15+r*0.5).toFixed(2));
+}
+
+function go(n){
+  idx=Math.max(0,Math.min(SLIDES.length-1,n));
+  slides.forEach((el,i)=>el.classList.toggle("active",i===idx));
+  const s=SLIDES[idx];
+  paint(s.ratio);
+  const m=document.getElementById("marker");
+  m.style.top=ratioToTop(s.ratio)+"%";m.dataset.d=s.depthLabel;
+  document.getElementById("bar").style.width=(idx/(SLIDES.length-1)*100)+"%";
+  document.getElementById("cur").textContent=String(idx+1).padStart(2,"0");
+}
+document.getElementById("tot").textContent=String(SLIDES.length).padStart(2,"0");
+
+// bubbles
+const bubbles=document.getElementById("bubbles");
+for(let i=0;i<24;i++){
+  const b=document.createElement("div");b.className="bubble";
+  const size=2+Math.random()*10;
+  b.style.width=size+"px";b.style.height=size+"px";
+  b.style.left=Math.random()*100+"%";
+  b.style.animationDuration=(9+Math.random()*13)+"s";
+  b.style.animationDelay=(-Math.random()*14)+"s";
+  b.style.setProperty("--drift",(Math.random()*60-30)+"px");
+  bubbles.appendChild(b);
+}
+
+// nav
+const next=()=>go(idx+1), prev=()=>go(idx-1);
+document.getElementById("next").onclick=next;
+document.getElementById("prev").onclick=prev;
+const map=document.getElementById("map");
+const closeMap=()=>map.classList.remove("open");
+document.getElementById("mapclose").onclick=closeMap;
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"||e.key===" "||e.key==="PageDown"){e.preventDefault();next();}
+  else if(e.key==="ArrowLeft"||e.key==="PageUp"){e.preventDefault();prev();}
+  else if(e.key==="Home")go(0);
+  else if(e.key==="End")go(SLIDES.length-1);
+  else if(e.key.toLowerCase()==="m")map.classList.toggle("open");
+  else if(e.key==="Escape")closeMap();
+  else if(e.key.toLowerCase()==="f"){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+});
+
+let sx=0;
+addEventListener("touchstart",e=>sx=e.touches[0].clientX,{passive:true});
+addEventListener("touchend",e=>{const dx=e.changedTouches[0].clientX-sx;if(Math.abs(dx)>50)(dx<0?next():prev());});
+
+go(0);
+</script>
+</body>
+</html>
